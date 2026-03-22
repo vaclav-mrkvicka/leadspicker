@@ -551,6 +551,13 @@ Returns: `{"items": [...], "count": N}` where each item has `contact_data` with
 
 ### Launch Full Classification
 
+**IMPORTANT — Two-step create pattern:**
+
+The POST endpoint creates the column shell but **does not save the prompt or `is_boolean`**.
+You must immediately PATCH the column after creation to apply those fields.
+
+#### Step 1 — Create the column shell
+
 ```
 POST https://app.leadspicker.com/app/sb/api/projects/{project_id}/magic-columns
 ```
@@ -559,8 +566,31 @@ POST https://app.leadspicker.com/app/sb/api/projects/{project_id}/magic-columns
 {
   "magic_column_type": "ai_custom_column",
   "column_name": "{column_name}",
+  "all_selected": true
+}
+```
+
+The response will include the column's `contact_type` (a slugified version of the column name).
+Immediately fetch the project to get the newly assigned column `id`:
+
+```
+GET https://app.leadspicker.com/app/sb/api/projects/{project_id}
+```
+
+Find the column in `headers_data` by matching `contact_type`, and note its `id`.
+
+#### Step 2 — Apply the prompt and boolean flag via PATCH
+
+```
+PATCH https://app.leadspicker.com/app/sb/api/projects/{project_id}/magic-columns/{column_id}
+```
+
+```json
+{
+  "id": {column_id},
   "prompt": "{prompt_text_with_escaped_newlines}",
-  "is_boolean": true | false
+  "is_boolean": true | false,
+  "custom_llm": null
 }
 ```
 
@@ -568,33 +598,52 @@ POST https://app.leadspicker.com/app/sb/api/projects/{project_id}/magic-columns
 > Template variables like `{{company_name}}` are filled by Leadspicker automatically.
 > Set `is_boolean` based on the Output Mode Decision section above.
 
-### cURL Example — Boolean Classification
+Only after the PATCH succeeds does the column begin processing contacts with the correct prompt.
+Verify by re-fetching `headers_data` and confirming `is_boolean` and `prompt` are set.
+
+### cURL Example — Boolean Classification (two-step)
 
 ```bash
+# Step 1: Create shell
 curl -X POST "https://app.leadspicker.com/app/sb/api/projects/{project_id}/magic-columns" \
   -H 'accept: application/json' \
   -H 'content-type: application/json' \
   -H 'x-api-key: {api_key}' \
+  -d '{"magic_column_type": "ai_custom_column", "column_name": "Is SaaS", "all_selected": true}'
+
+# Step 2: Get the column id from headers_data, then PATCH
+curl -X PATCH "https://app.leadspicker.com/app/sb/api/projects/{project_id}/magic-columns/{column_id}" \
+  -H 'accept: application/json' \
+  -H 'content-type: application/json' \
+  -H 'x-api-key: {api_key}' \
   -d '{
-    "magic_column_type": "ai_custom_column",
-    "column_name": "Is SaaS",
+    "id": {column_id},
     "prompt": "Determine whether this company is a SaaS (Software as a Service) company.\n\nA SaaS company primarily sells software delivered via the cloud on a subscription or recurring basis. This includes B2B SaaS platforms, productivity tools, CRMs, ERPs, developer tools, analytics platforms, and similar products where the core offering is cloud-hosted software.\n\nDo NOT classify as SaaS: marketing agencies, consultancies, IT service providers, e-commerce stores, hardware companies, marketplaces (unless their core product is a software platform), or companies that simply use SaaS tools but sell something else.\n\nIf there is not enough information to determine, return false.\n\nInput:\n- Company Name: {{company_name}}\n- Company Website: {{company_website}}\n- LinkedIn Company Description: {{linkedin_company_description}}\n- Company Website Summary: {{website_text_summary}}",
-    "is_boolean": true
+    "is_boolean": true,
+    "custom_llm": null
   }'
 ```
 
-### cURL Example — String Classification
+### cURL Example — String Classification (two-step)
 
 ```bash
+# Step 1: Create shell
 curl -X POST "https://app.leadspicker.com/app/sb/api/projects/{project_id}/magic-columns" \
   -H 'accept: application/json' \
   -H 'content-type: application/json' \
   -H 'x-api-key: {api_key}' \
+  -d '{"magic_column_type": "ai_custom_column", "column_name": "Industry", "all_selected": true}'
+
+# Step 2: PATCH with prompt
+curl -X PATCH "https://app.leadspicker.com/app/sb/api/projects/{project_id}/magic-columns/{column_id}" \
+  -H 'accept: application/json' \
+  -H 'content-type: application/json' \
+  -H 'x-api-key: {api_key}' \
   -d '{
-    "magic_column_type": "ai_custom_column",
-    "column_name": "Industry",
+    "id": {column_id},
     "prompt": "Determine the primary industry of this company.\n\nClassify into exactly one of these industries: SaaS, E-commerce, FinTech, HealthTech, EdTech, Marketing Agency, Consulting, Manufacturing, Retail, Media, Real Estate, Logistics, Cybersecurity, HR Tech, Legal Tech, Other.\n\nReturn only the industry name, nothing else. Use the exact spelling from the list above. If there is not enough data to determine the industry, return \"Other\".\n\nInput:\n- Company Name: {{company_name}}\n- Company Website: {{company_website}}\n- LinkedIn Company Description: {{linkedin_company_description}}\n- Company Website Summary: {{website_text_summary}}",
-    "is_boolean": false
+    "is_boolean": false,
+    "custom_llm": null
   }'
 ```
 
@@ -714,22 +763,15 @@ Does this look correct? Should I launch the full classification for all contacts
 
 ### Step 6: Launch Full Classification
 
-Only after the user approves the preview results, execute the full API call:
+Only after the user approves the preview results, execute the two-step create pattern
+described in the **Launch Full Classification** section of API Calls above:
 
-```
-POST https://app.leadspicker.com/app/sb/api/projects/{project_id}/magic-columns
-```
+1. POST to create the column shell (prompt and is_boolean are NOT saved by POST)
+2. GET the project to retrieve the new column's `id` from `headers_data`
+3. PATCH the column with the prompt, `is_boolean`, and `custom_llm: null`
+4. Verify the PATCH response shows the correct `prompt` and `is_boolean` before confirming to the user
 
-```json
-{
-  "magic_column_type": "ai_custom_column",
-  "column_name": "{column_name}",
-  "prompt": "{prompt_text_with_escaped_newlines}",
-  "is_boolean": true | false
-}
-```
-
-Report the result — success (HTTP 201) or failure with error details.
+Report the result — success or failure with error details.
 
 ### Step 7: Report and Suggest Next Steps
 
