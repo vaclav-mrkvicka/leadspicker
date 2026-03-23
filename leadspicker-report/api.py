@@ -4,10 +4,12 @@ Docs: https://app.leadspicker.com/app/sb/api/openapi.json
 Auth: X-Api-Key header
 """
 
+import concurrent.futures
 import requests
 
 BASE_URL = "https://app.leadspicker.com/app/sb/api"
-REQUEST_TIMEOUT = 30  # seconds per request
+REQUEST_TIMEOUT = (10, 30)   # (connect, read) per socket operation
+TOTAL_TIMEOUT   = 90         # wall-clock limit per request
 
 
 class LeadsPickerClient:
@@ -22,7 +24,14 @@ class LeadsPickerClient:
 
     def _get(self, path: str, params: dict = None) -> dict:
         url = f"{BASE_URL}{path}"
-        r = self.session.get(url, params=params, timeout=REQUEST_TIMEOUT)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+            future = ex.submit(
+                lambda: self.session.get(url, params=params, timeout=REQUEST_TIMEOUT)
+            )
+            try:
+                r = future.result(timeout=TOTAL_TIMEOUT)
+            except concurrent.futures.TimeoutError:
+                raise TimeoutError(f"Request timed out after {TOTAL_TIMEOUT}s: {path}")
         r.raise_for_status()
         return r.json()
 
