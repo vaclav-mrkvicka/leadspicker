@@ -289,10 +289,17 @@ def main():
         date_filtered  = True
     else:
         report_date = date.fromisoformat(args.date) if args.date else date.today()
-        week_start = report_date - timedelta(days=report_date.weekday())
-        today_str      = report_date.isoformat()
+        if report_date.weekday() == 0 and not args.date:
+            # Monday default: report on the previous completed Mon–Sun week
+            week_end   = report_date - timedelta(days=1)   # last Sunday
+            week_start = week_end - timedelta(days=6)       # previous Monday
+        else:
+            # Explicit date or mid-week manual run: Mon–that date
+            week_start = report_date - timedelta(days=report_date.weekday())
+            week_end   = report_date
+        today_str      = week_end.isoformat()
         week_start_str = week_start.isoformat()
-        date_filtered  = bool(args.date)  # explicit date → filter; default today → all-time
+        date_filtered  = True  # always show weekly totals, no "Today" column
 
     clients = load_accounts()
     if not clients:
