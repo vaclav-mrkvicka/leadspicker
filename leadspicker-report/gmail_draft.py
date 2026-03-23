@@ -39,6 +39,27 @@ SENTIMENT_COLORS = {
     "limit_reached":  "#6e7781",
 }
 
+# Real client names and recipient email addresses per account key
+CLIENT_CONFIG = {
+    "STARTUPGRIND":        {"name": "Startup Grind",         "to": "naman@startupgrind.com"},
+    "INFOSHARE":           {"name": "Infoshare",              "to": "agnieszka@infoshare.pl, todd.benson@leadspicker.com"},
+    "OVHNESTARTUPS":       {"name": "OVH Startups NE",       "to": "cezary.skarzynski@ovhcloud.com, todd.benson@leadspicker.com"},
+    "OVHAFRICASTARTUPS":   {"name": "OVH Startups Africa",   "to": "christopher.apedo-amah@ovhcloud.com, todd.benson@leadspicker.com"},
+    "MASSCHALLENGE":       {"name": "MassChallenge Switzerland", "to": "Elodie@masschallenge.org, todd.benson@leadspicker.com"},
+    "OVHSESTARTUPS":       {"name": "OVH Startups SE",       "to": "ilaria.navoni@ovhcloud.com, todd.benson@leadspicker.com"},
+    "OVHFRANCESTARTUPS":   {"name": "OVH Startups France",   "to": "leonard.pommereau@ovhcloud.com, todd.benson@leadspicker.com"},
+    "PWCGERMANY":          {"name": "PwC Germany",            "to": "jannis.grube@pwc.com, todd.benson@leadspicker.com"},
+    "OVHCEESTARTUPS":      {"name": "OVH Startups CEE",      "to": "natalia.swirska@ovhcloud.com, todd.benson@leadspicker.com"},
+    "SEYFOR":              {"name": "Seyfor",                 "to": "Filip.Naplava@seyfor.com"},
+    "OVHAPACSTARTUPS":     {"name": "OVH Startups APAC",     "to": "satyam.santosh@ovhcloud.com, todd.benson@leadspicker.com"},
+    "WAV":                 {"name": "WhatAVenture",           "to": "ipek.hizar@whataventure.com"},
+    "OVHAPACPARTNERS":     {"name": "OVH Partners APAC",     "to": "jeff.lee@ovhcloud.com, todd.benson@leadspicker.com"},
+    "PWCBELGIUM":          {"name": "PwC Belgium",            "to": "kato.de.wulf@pwc.com, todd.benson@leadspicker.com"},
+    "IOVOX":               {"name": "Iovox",                  "to": "sonja@iovox.com, todd.benson@leadspicker.com"},
+    "ALVAO":               {"name": "Alvao",                  "to": "michal.minarovic@alvao.com, petr.hlousek@alvao.com"},
+    "VIENNABUSINESS":      {"name": "Vienna Business Agency", "to": "mwolf@wirtschaftsagentur.at"},
+}
+
 
 def _get_gmail_service():
     env = dotenv_values(ENV_PATH)
@@ -244,15 +265,19 @@ def create_draft(account_name, week_start, week_end, day, week, inbox_total,
                  sentiments, channels, recent_replies, project_breakdown=None):
     service = _get_gmail_service()
 
-    wc_label = datetime.datetime.strptime(week_start, "%Y-%m-%d").strftime("%-d %b")
-    subject  = f"Leadspicker Weekly — {account_name} — w/c {wc_label}"
+    config     = CLIENT_CONFIG.get(account_name, {})
+    real_name  = config.get("name", account_name)
+    to_address = config.get("to", "")
 
-    html_body = build_html(account_name, week_start, week_end, day, week,
+    wc_label = datetime.datetime.strptime(week_start, "%Y-%m-%d").strftime("%-d %b")
+    subject  = f"Leadspicker Weekly — {real_name} — w/c {wc_label}"
+
+    html_body = build_html(real_name, week_start, week_end, day, week,
                            inbox_total, sentiments, channels, recent_replies, project_breakdown)
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["To"]      = ""
+    msg["To"]      = to_address
     msg.attach(MIMEText(html_body, "html"))
 
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
