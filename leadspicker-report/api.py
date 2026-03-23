@@ -7,6 +7,7 @@ Auth: X-Api-Key header
 import requests
 
 BASE_URL = "https://app.leadspicker.com/app/sb/api"
+REQUEST_TIMEOUT = 30  # seconds per request
 
 
 class LeadsPickerClient:
@@ -21,7 +22,7 @@ class LeadsPickerClient:
 
     def _get(self, path: str, params: dict = None) -> dict:
         url = f"{BASE_URL}{path}"
-        r = self.session.get(url, params=params)
+        r = self.session.get(url, params=params, timeout=REQUEST_TIMEOUT)
         r.raise_for_status()
         return r.json()
 
