@@ -234,6 +234,30 @@ The `CLIENT_CONFIG` lookup and display name resolution in `gmail_draft.py` shoul
 
 ---
 
+## Scheduled Automation
+
+The report runs automatically every **Monday at 8:00 AM** via a macOS LaunchAgent, creating Gmail drafts for all configured accounts.
+
+| File | Purpose |
+|------|---------|
+| `/Users/fallengemini/Library/LaunchAgents/com.leadspicker.weeklyreport.plist` | LaunchAgent definition |
+| `leadspicker-report/cron.log` | stdout + stderr from scheduled runs |
+
+**Check last run:**
+```bash
+tail -50 /Users/fallengemini/Desktop/VSCode/leadspicker-report/cron.log
+```
+
+**Reload after editing the plist:**
+```bash
+launchctl unload ~/Library/LaunchAgents/com.leadspicker.weeklyreport.plist
+launchctl load ~/Library/LaunchAgents/com.leadspicker.weeklyreport.plist
+```
+
+**Manage:** Enable/disable via `launchctl load`/`unload`, or edit `StartCalendarInterval` in the plist to change the schedule.
+
+---
+
 ## Common Issues
 
 | Symptom | Cause | Fix |
@@ -243,3 +267,4 @@ The `CLIENT_CONFIG` lookup and display name resolution in `gmail_draft.py` shoul
 | `ERROR fetching daily stats` | Invalid or expired API key | Get a fresh key from the client's Leadspicker account |
 | Draft To address is empty | Account not in `CLIENT_CONFIG` | Add entry to `CLIENT_CONFIG` in `gmail_draft.py` |
 | Gmail auth error | Missing or expired OAuth tokens | Re-run `python3 leadspicker-report/gmail_auth.py` |
+| Monday drafts not appearing | LaunchAgent not loaded or failed | Check `cron.log`; reload the plist if needed |
