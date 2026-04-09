@@ -160,6 +160,28 @@ Input:
 - Company Website Summary: {{website_text_summary}}
 ```
 
+### Using Custom / Enriched Columns as Input
+
+When the user wants to classify based on a column that was created via enrichment (e.g.,
+LinkedIn Company Country, LinkedIn Company Size, Website Text Summary), reference it using
+its `contact_type` slug wrapped in double curly braces — the same `{{ variable }}` syntax
+as standard variables.
+
+To find the correct `contact_type` for any column, check `headers_data` from
+`GET /projects/{project_id}` — the slug is in the `contact_type` field.
+
+Example — classifying based on LinkedIn Company Country:
+
+```
+Input:
+- LinkedIn Company Country: {{linkedin_company_country}}
+```
+
+**Critical rule:** Always list the variable in a separate `Input:` block at the bottom of
+the prompt. Never embed `{{ variable }}` inline inside the task description or criteria text
+— this causes the AI to receive the literal template string instead of the resolved value,
+resulting in incorrect classifications (e.g., all false for a boolean column).
+
 ### How to Decide
 
 | User asks about... | Variable set | Example |
@@ -168,6 +190,7 @@ Input:
 | Job title match, role relevance | Person Basic | "Is this a C-level executive?" |
 | Person background, experience fit | Person Detailed | "Has this person worked in sales leadership?" |
 | Lead relevance (person + company fit) | Mixed | "Is this a relevant lead for our SaaS product?" |
+| Country / geography classification | Custom enriched | `{{linkedin_company_country}}` in Input block |
 | Name cleaning | Single variable | "Clean first name" → `{{full_name}}`, `{{linkedin}}` |
 | Job title cleaning | Single variable | "Clean job title" → `{{position}}` |
 | Company name cleaning | Single variable | "Clean company name" → `{{company_name}}` |
