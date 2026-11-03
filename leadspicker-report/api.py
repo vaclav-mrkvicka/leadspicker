@@ -44,8 +44,8 @@ class LeadsPickerClient:
         })
 
     def get_projects(self) -> list:
-        """All projects for this account."""
-        return self._get("/projects")
+        """All sequences for this account (`/projects` was removed Oct 2026)."""
+        return self._get("/sequences")
 
     def get_inbound_messages(self, projects: list[int] = None, sentiment: str = None) -> dict:
         """Replies inbox. Optionally filter by sentiment to get accurate per-sentiment counts."""
@@ -108,8 +108,8 @@ class LeadsPickerClient:
         return counts, total
 
     def get_projects(self, limit: int = 30) -> list:
-        """Projects ordered by last active date."""
-        data = self._get("/projects", {"order_by_field": "last_active", "order_direction": "desc", "limit": limit})
+        """Sequences ordered by last active date (`/projects` was removed Oct 2026; only sequences send)."""
+        data = self._get("/sequences", {"order_by_field": "last_active", "order_direction": "desc", "limit": limit})
         return data if isinstance(data, list) else data.get("results", data.get("items", []))
 
     def get_project_breakdown(self, start_date: str, end_date: str) -> list[dict]:
@@ -150,4 +150,4 @@ class LeadsPickerClient:
             params["start_date"] = start_date
         if end_date:
             params["end_date"] = end_date
-        return self._get(f"/projects/{project_id}/sequence-stats", params)
+        return self._get(f"/sequences/{project_id}/sequence-stats", params)
